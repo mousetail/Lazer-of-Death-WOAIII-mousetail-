@@ -55,6 +55,7 @@ class Shape(pygame.sprite.Sprite):
                     self.speed[i]=-self.speed[i]
                     self.angle=math.degrees(math.atan2(-self.speed[0], -self.speed[1]))
                     self.rotate(0)
+        self.rect.center=self.position
     def rotate(self, angle):
         
         self.angle+=angle
@@ -62,8 +63,8 @@ class Shape(pygame.sprite.Sprite):
         
     def draw(self,surface,offset):
         size=self.rotimage.get_size()
-        self.rect.center=self.position
-        surface.blit(self.rotimage,tuple(self.position[i]-size[i]/2+offset[i] for i in xrange(2)))
+        if sum(self.position[i]+offset[i]+size[i]>0 for i in xrange(2)):
+            surface.blit(self.rotimage,tuple(self.position[i]-size[i]/2+offset[i] for i in xrange(2)))
     def event(self,event):
         pass
     def accelarate(self, ammount):
@@ -116,7 +117,15 @@ class Player(Shape):
         #if event.type==pygame.KEYDOWN:
         #    if event.key==pygame.K_z:
 class Accelerator(Shape):
+    def __init__(self, *args, **kwargs):
+        if ("accel" in kwargs.keys()):
+            self.acceleration=kwargs["accel"]
+            del kwargs["accel"]
+        else:
+            self.acceleration=1
+        
+        Shape.__init__(self, *args, **kwargs)
     def update(self):
         Shape.update(self)
-        self.accelarate(1)
+        self.accelarate(self.acceleration)
 import coin
