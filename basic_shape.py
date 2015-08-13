@@ -72,6 +72,9 @@ class Shape(pygame.sprite.Sprite):
         y=-math.cos(math.radians(self.angle))*ammount
         self.speed[0]+=x
         self.speed[1]+=y
+        
+   
+    
     def fire(self):
         if self.num==0:
             bul=Bullet(self.position,self.GUI.bullet_img,angle=self.angle,friction=0,radius=4,maxpos=self.maxpos)
@@ -84,7 +87,7 @@ class Shape(pygame.sprite.Sprite):
         coins=[]
         for i in range(14):
             angle=random.randint(0,360)
-            coins.append(coin.Coin(self.position,self.GUI.coin_img,1,angle,radius=128,maxpos=self.maxpos))
+            coins.append(coin.Coin(self.position,self.GUI.coin_img,angle,radius=128,gui=self.GUI,value=1,maxpos=self.maxpos))
         for i in coins:
             i.accelarate(random.randint(6,12))
             self.GUI.add_coin(i)
@@ -116,6 +119,9 @@ class Player(Shape):
         pass
         #if event.type==pygame.KEYDOWN:
         #    if event.key==pygame.K_z:
+    def draw(self, *args, **kwargs):
+        if self.GUI.player_immune%16<8:
+            Shape.draw(self, *args, **kwargs)
 class Accelerator(Shape):
     def __init__(self, *args, **kwargs):
         if ("accel" in kwargs.keys()):
