@@ -20,14 +20,15 @@ class Coin(basic_shape.Shape):
         
         basic_shape.Shape.__init__(self,position,image,*args,**kwargs)
         self.age=0
-        
-        self.GUI.score+=self.value
+        if self.timeout>0:
+            self.GUI.score+=self.value
     def update(self):
         basic_shape.Shape.update(self)
         self.age+=1
           
-        if self.age>self.timeout:
+        if self.timeout>0 and self.age>self.timeout:
             self.kill()
+            #print self.timeout
     def draw(self, *args, **kwargs):
-        if self.age<(self.timeout//2) or self.age%8<=4:
+        if self.timeout<0 or self.age<(self.timeout//2) or self.age%8<=4:
             basic_shape.Shape.draw(self, *args, **kwargs)

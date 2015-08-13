@@ -17,3 +17,22 @@ def drawtextcentered(surface, position, font, text="", aa=1, color=(255,255,255)
     #print newpos
     surface.blit(surf, newpos)
     
+def loadhighscores(filename="hiscores.csv"):
+    try:
+        lfile=open(filename)
+    except IOError:
+        return {}
+    returndict={}
+    for line in lfile:
+        sline=line.strip()
+        if sline:
+            name,score=sline.split(";")
+            returndict[int(score)]=name
+    lfile.close()
+    return returndict
+def savehighscores(scores, filename="hiscores.csv"):
+    lfile=open(filename,"w")
+    for i in scores.items():
+        lfile.write(i[1]+";"+str(i[0])+"\n")
+    lfile.close() 
+        
