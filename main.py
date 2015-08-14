@@ -28,17 +28,20 @@ class GUI(object):
         self.screen=pygame.display.set_mode((1200,600))
         self.splash=pygame.image.load("splash.png").convert()
         pygame.mixer.music.set_volume(0.5)
-        pygame.mixer.music.load("blown away.ogg")
+        pygame.mixer.music.load("Ouroboros.ogg")
+        pygame.mixer.music.play(-1)
         self.screen.blit(self.splash,(0,0))
         pygame.display.flip()
         self.planeimage=pygame.image.load("plane.png").convert_alpha()
         self.astroid_image=pygame.image.load("astroid.png").convert_alpha()
+        self.redguy_image=pygame.image.load("redguy.png").convert_alpha()
         self.backimage=pygame.image.load("background.png").convert()
         self.bullet_img=pygame.image.load("bullet.png").convert_alpha()
         self.coin_img=pygame.image.load("coin.png").convert_alpha()
+        self.life_img=pygame.image.load("life.png").convert_alpha()
+        self.glowring_img=pygame.image.load("glowring.png").convert_alpha()
         self.player_image=pygame.image.load("player_plane.png").convert_alpha()
         self.background_special_image=pygame.image.load("background_special.png").convert()
-        pygame.mixer.music.play()
         self.running=True;
         self.world_size=(3000,3000)
         #self.player.gui=self
@@ -56,7 +59,7 @@ class GUI(object):
         self.clock=pygame.time.Clock()
         self.transsurface=pygame.Surface(self.screen.get_size())
         for i in range(50):
-            self.addrandom()
+            self.addrandommonster()
         self.font=pygame.font.SysFont("Subway Ticker", 30, False, False)
         self.state="splash"
         self.endtime=int(time.time()+3)
@@ -73,11 +76,14 @@ class GUI(object):
         self.astroids.empty()
         self.objects.add(self.player)
         for i in range(50):
-            self.addrandom()
+            self.addrandommonster()
         self.score=0
         self.endtime=time.time()+60
         self.deaths=0
+        self.deathscore=0
         self.player_immune=False
+        self.lives=3
+        
     def startmenu(self):
         self.transstart()
         self.state="menu"
@@ -105,6 +111,11 @@ class GUI(object):
         self.state="score"
         
         self.name=""
+        
+        print "deaths:          "+str(self.deaths)
+        print "score while dead "+str(self.deathscore)
+        if self.deaths>0:
+            print "score per death: "+str(self.deathscore/self.deaths)
         
         size=self.screen.get_size()
         self.menusurf=pygame.Surface(size, pygame.SRCALPHA)
@@ -146,10 +157,14 @@ class GUI(object):
         self.transstart()
         self.timeleft=-int(time.time()-self.endtime)
         self.player.position=[self.world_size[i]//2 for i in xrange(2)]
+        
+        for i in tuple(self.coins):
+            i.kill()
+        
         for i in range(75):
-            self.addrandom( image=self.astroid_image, groups=(self.astroids, self.objects), speed=random.random()*7+5)
+            self.addrandom( image=self.astroid_image, groups=(self.astroids, self.objects), rotates=False, speed=random.random()*7+5)
         for i in range(300):
-            self.addrandom(coin.Coin, self.coin_img, None, random.random()*12, value=10, groups=(self.objects,self.special_coins,self.coins),friction=0,timeout=-1)
+            self.addrandom(coin.Coin, self.coin_img, None, random.random()*12, value=10, rotates=False,groups=(self.objects,self.special_coins,self.coins),friction=0,timeout=-1)
     def run(self):
         while self.running:
             self.clock.tick(60)
@@ -190,9 +205,15 @@ class GUI(object):
                 self.screen.blit(self.font.render(str(self.score),1,(255,255,255)),(10,10))
                 if self.state=="dead":
                     color=(100,100,100)
+                    ltime=self.timeleft
                 else:
                     color=(255,255,255)
-                textutil.drawtextcentered(self.screen, (1180,10), self.font, "0:"+str(int(self.endtime-time.time())), 
+                    ltime=int(self.endtime-time.time())
+                    if self.lives!=3:
+                        for i in range(self.lives):
+                            self.screen.blit(self.life_img,(size[0]//2-65+36*i,10))
+                
+                textutil.drawtextcentered(self.screen, (1180,10), self.font, "0:"+str(ltime), 
                                           alignment=(2,0),color=color)
             
         else:
@@ -215,24 +236,31 @@ class GUI(object):
                 if (self.state!="dead" or i not in self.enemies):
                     i.update();
             if self.state!="dead":
-                for en, bul in pygame.sprite.groupcollide(self.enemies, self.bullets, False, True, pygame.sprite.collide_circle).iteritems():
+                for en, bul in pygame.sprite.groupcollide(self.enemies, self.bullets, False, False, pygame.sprite.collide_circle).iteritems():
                     #self.enemies.remove(i)
-                    en.explode()
-                    en.kill()
-                    self.addrandom()
+                    if bul[0].shooter is not en:
+                        en.explode(bul[0])
+                        en.kill()
+                        self.addrandommonster()
+                        bul[0].kill()
             if self.player:
-                for i in pygame.sprite.spritecollide(self.player, self.bullets, False, pygame.sprite.collide_circle):
-                    
-                    if i.timeout==0:
-                        i.kill()
+                if self.state=="game" and not self.player_immune:
+                    for i in pygame.sprite.spritecollide(self.player, self.bullets, False, pygame.sprite.collide_circle):
+                        
+                        if i.shooter is not self.player:
+                            i.kill()
+                            self.lives-=1
+                            if self.lives<=0:
+                                self.lives=3
+                                self.startdie()
+                                self.deaths+=1
                     #else:
                         #print "ignored due to timeout"
-                num=0
+                #num=0
                 
-                if self.state=="game" and not self.player_immune:
                     for i in pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle):
                         i.kill()
-                        self.addrandom()
+                        self.addrandommonster()
                         self.startdie()
                         self.deaths+=1
                 elif self.state=="dead":
@@ -244,6 +272,8 @@ class GUI(object):
                     #    print i.rect.center, i.radius, self.player.position, self.player.radius, num
                 for i in pygame.sprite.spritecollide(self.player, self.coins, True, pygame.sprite.collide_circle):
                     self.score+=i.value
+                    if self.state=="dead":
+                        self.deathscore+=i.value
             #print "collision"
         
             if self.state=="game":
@@ -292,6 +322,14 @@ class GUI(object):
                 else:
                     for i in self.objects:
                         i.event(event)
+    def addrandommonster(self):
+        c=random.choice(("normal",)*14+("wave",)*4+("shooter",)*14)
+        if c=="normal":
+            self.addrandom()
+        elif c=="wave":
+            self.addrandom(cls=basic_shape.RotateCellerator,image=self.glowring_img,speed=0,accel=1.5,friction=0.1,rotates=False)
+        elif c=="shooter":
+            self.addrandom(cls=basic_shape.Shooter,image=self.redguy_image)
     def addrandom(self, cls=basic_shape.Shape, image=None, angle=NotImplemented, speed=5, groups=None, friction=0, *args, **kwargs):
         position=[0,0]
         if image is None:

@@ -12,7 +12,8 @@ class Shape(pygame.sprite.Sprite):
     '''
 
 
-    def __init__(self, position, image, angle=0, speed=(0,0),friction=0.1,maxspeed=20,maxpos=(1000,500),radius=32,groups=(), gui=None):
+    def __init__(self, position, image, angle=0, speed=(0,0),friction=0.1,maxspeed=20,maxpos=(1000,500),radius=32,groups=(),
+                 gui=None, rotates=True):
         '''
         Constructor
         '''
@@ -22,6 +23,7 @@ class Shape(pygame.sprite.Sprite):
         self.image=image
         self.angle=angle
         self.speed=list(speed)
+        self.rotates=rotates
         self.friction=1-friction
         self.maxspeed=maxspeed
         self.maxspeed2=maxspeed**2
@@ -31,7 +33,6 @@ class Shape(pygame.sprite.Sprite):
         self.rect=self.image.get_rect()
         self.GUI=gui
         self.dieonwall=False
-        
         self.firerate=5
         self.num=0
     def update(self):
@@ -59,12 +60,19 @@ class Shape(pygame.sprite.Sprite):
     def rotate(self, angle):
         
         self.angle+=angle
-        self.rotimage=pygame.transform.rotate(self.image,self.angle)
+        if self.rotates:
+            self.rotimage=pygame.transform.rotate(self.image,self.angle)
         
     def draw(self,surface,offset):
-        size=self.rotimage.get_size()
+        if self.rotates:
+            img=self.rotimage
+            size=self.rotimage.get_size()
+        else:
+            img=self.image
+            size=self.image.get_size()
+            
         if sum(self.position[i]+offset[i]+size[i]>0 for i in xrange(2)):
-            surface.blit(self.rotimage,tuple(self.position[i]-size[i]/2+offset[i] for i in xrange(2)))
+            surface.blit(img,tuple(self.position[i]-size[i]/2+offset[i] for i in xrange(2)))
     def event(self,event):
         pass
     def accelarate(self, ammount):
@@ -75,19 +83,22 @@ class Shape(pygame.sprite.Sprite):
         
    
     
-    def fire(self):
+    def fire(self, calcscore=True):
         if self.num==0:
-            bul=Bullet(self.position,self.GUI.bullet_img,angle=self.angle,friction=0,radius=4,maxpos=self.maxpos)
+            bul=Bullet(self.position,self.GUI.bullet_img,angle=self.angle,friction=0,radius=4,maxpos=self.maxpos,rotates=False)
             bul.accelarate(12)
+            bul.calcscore=calcscore
+            bul.shooter=self
             self.GUI.add_bullet(bul)
         self.num-=1
         if self.num<0:
             self.num=self.firerate
-    def explode(self):
+    def explode(self,bullet):
         coins=[]
         for i in range(14):
             angle=random.randint(0,360)
-            coins.append(coin.Coin(self.position,self.GUI.coin_img,angle,radius=128,gui=self.GUI,value=1,maxpos=self.maxpos))
+            coins.append(coin.Coin(self.position,self.GUI.coin_img,angle,radius=128,gui=self.GUI,value=1,
+                                   maxpos=self.maxpos,calcscore=bullet.calcscore,rotates=False))
         for i in coins:
             i.accelarate(random.randint(6,12))
             self.GUI.add_coin(i)
@@ -96,7 +107,7 @@ class Bullet(Shape):
         Shape.__init__(self,*args,**kwargs)
         #print "made bullet"
         self.dieonwall=True
-        self.timeout=60
+        self.timeout=7
     def update(self):
         Shape.update(self)
         if self.timeout:
@@ -134,4 +145,23 @@ class Accelerator(Shape):
     def update(self):
         Shape.update(self)
         self.accelarate(self.acceleration)
+class RotateCellerator(Accelerator):
+    def __init__(self, *args, **kwargs):
+        Accelerator.__init__(self,*args,**kwargs)
+        self.direction=1
+    def update(self):
+        Accelerator.update(self)
+        self.rotate(self.direction)
+        if random.randint(0,12)==0:
+            self.direction+=random.randint(-1,1)
+            if self.direction>10:
+                self.direction=10
+            elif self.direction<-10:
+                self.direction=-10
+class Shooter(Shape):
+    def update(self):
+        Shape.update(self)
+        if random.randint(0,12)==1:
+            self.fire(False)
+        
 import coin
