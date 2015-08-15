@@ -9,6 +9,7 @@ hiscores.csv
 
 # Distribution / packaging
 .Python
+dist/
 env/
 build/
 develop-eggs/
