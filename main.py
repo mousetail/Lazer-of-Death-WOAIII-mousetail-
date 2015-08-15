@@ -48,7 +48,9 @@ class GUI(object):
         self.coin_snd=pygame.mixer.Sound("coin2.wav")
         self.coin_snd_chan=pygame.mixer.Channel(0)
         self.expl_snd=pygame.mixer.Sound("explosion.wav")
-        self.expl_snd_chan=tuple(pygame.mixer.Channel(i) for i in range(2))
+        self.expl_snd_chan=tuple(pygame.mixer.Channel(i+1) for i in range(2))
+        self.door_snd=pygame.mixer.Sound("door2.wav")
+        self.door_snd_chan=pygame.mixer.Channel(3)
         
         
         self.running=True;
@@ -77,6 +79,9 @@ class GUI(object):
         #pygame.mixer.get_busy()
         if not self.coin_snd_chan.get_busy():
             self.coin_snd_chan.play(self.coin_snd)
+    def playdoor(self):
+        if not self.door_snd_chan.get_busy():
+            self.door_snd_chan.play(self.door_snd)
     def play_explo(self):
         for i in self.expl_snd_chan:
             if not i.get_busy():
@@ -171,6 +176,7 @@ class GUI(object):
         self.trans=True
         self.transsurface.blit(self.screen,(0,0))
         self.transamount=0
+        self.playdoor()
     def startdie(self):
         print "FPS: ",self.clock.get_fps()
         self.state="dead"

@@ -71,7 +71,7 @@ class BuildExe:
         self.extra_datas = ['splash.png', 'Ouroboros.ogg', 'plane.png', 'astroid.png', 'redguy.png', 'background.png',
                              'bullet.png', 'coin.png', 'life.png', 'glowring.png', 'player_plane.png', 'instructions.png',
                               'background_special.png', 'coin2.wav', 'explosion.wav',"LICENSE","SUBWAY.ttf",
-                              "turtle.png"]
+                              "turtle.png","door2.wav"]
  
         #Extra/excludes python modules
         self.extra_modules = ["pygame"]
