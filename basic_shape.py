@@ -10,7 +10,7 @@ class Shape(pygame.sprite.Sprite):
     '''
     Any shape
     '''
-
+    numcoins=14
 
     def __init__(self, position, image, angle=0, speed=(0,0),friction=0.1,maxspeed=20,maxpos=(1000,500),radius=32,groups=(),
                  gui=None, rotates=True):
@@ -95,7 +95,7 @@ class Shape(pygame.sprite.Sprite):
             self.num=self.firerate
     def explode(self,bullet):
         coins=[]
-        for i in range(14):
+        for i in range(self.numcoins):
             angle=random.randint(0,360)
             coins.append(coin.Coin(self.position,self.GUI.coin_img,angle,radius=128,gui=self.GUI,value=1,
                                    maxpos=self.maxpos,calcscore=bullet.calcscore,rotates=False))
@@ -134,6 +134,7 @@ class Player(Shape):
         if self.GUI.player_immune%16<8:
             Shape.draw(self, *args, **kwargs)
 class Accelerator(Shape):
+    numcoins=15
     def __init__(self, *args, **kwargs):
         if ("accel" in kwargs.keys()):
             self.acceleration=kwargs["accel"]
@@ -146,6 +147,7 @@ class Accelerator(Shape):
         Shape.update(self)
         self.accelarate(self.acceleration)
 class RotateCellerator(Accelerator):
+    numcoins=20
     def __init__(self, *args, **kwargs):
         Accelerator.__init__(self,*args,**kwargs)
         self.direction=1
@@ -153,15 +155,25 @@ class RotateCellerator(Accelerator):
         Accelerator.update(self)
         self.rotate(self.direction)
         if random.randint(0,12)==0:
-            self.direction+=random.randint(-1,1)
+            self.direction+=random.randint(-2,2)
             if self.direction>10:
                 self.direction=10
             elif self.direction<-10:
                 self.direction=-10
-class Shooter(Shape):
+class Shooter(RotateCellerator):
+    numcoins=25
     def update(self):
-        Shape.update(self)
-        if random.randint(0,12)==1:
+        RotateCellerator.update(self)
+        if random.randint(0,6)==1:
             self.fire(False)
+class Turtle(Shape):
+    numcoins=30
+    def __init__(self, *args, **kwargs):
+        Shape.__init__(self, *args, **kwargs)
+        self.lives=9
+        self.maxlives=9
+    def draw(self, surface, offset):
+        Shape.draw(self, surface, offset)
+        surface.fill((0,255,0),(self.position[0]+offset[0]-90,self.position[1]-100+offset[1],10*self.lives,10))
         
 import coin

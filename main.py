@@ -41,11 +41,21 @@ class GUI(object):
         self.life_img=pygame.image.load("life.png").convert_alpha()
         self.glowring_img=pygame.image.load("glowring.png").convert_alpha()
         self.player_image=pygame.image.load("player_plane.png").convert_alpha()
+        self.instructions_image=pygame.image.load("instructions.png").convert_alpha()
         self.background_special_image=pygame.image.load("background_special.png").convert()
+        self.turtle_image=pygame.image.load("turtle.png").convert_alpha()
+        
+        self.coin_snd=pygame.mixer.Sound("coin2.wav")
+        self.coin_snd_chan=pygame.mixer.Channel(0)
+        self.expl_snd=pygame.mixer.Sound("explosion.wav")
+        self.expl_snd_chan=tuple(pygame.mixer.Channel(i) for i in range(2))
+        
+        
         self.running=True;
         self.world_size=(3000,3000)
         #self.player.gui=self
-        
+        pygame.display.set_caption("Lazer of Death")
+        pygame.display.set_icon(self.player_image)
         
         self.player=None
         self.state="menu"
@@ -60,11 +70,20 @@ class GUI(object):
         self.transsurface=pygame.Surface(self.screen.get_size())
         for i in range(50):
             self.addrandommonster()
-        self.font=pygame.font.SysFont("Subway Ticker", 30, False, False)
+        self.font=pygame.font.Font("SUBWAY.ttf", 30)
         self.state="splash"
         self.endtime=int(time.time()+3)
-        
+    def playcoin(self):
+        #pygame.mixer.get_busy()
+        if not self.coin_snd_chan.get_busy():
+            self.coin_snd_chan.play(self.coin_snd)
+    def play_explo(self):
+        for i in self.expl_snd_chan:
+            if not i.get_busy():
+                i.play(self.expl_snd)
+                return
     def startgame(self):
+        print "FPS: ",self.clock.get_fps()
         self.transstart()
         self.player=basic_shape.Player((self.world_size[0]/2,self.world_size[1]/2),self.player_image,45,(10,10),gui=self,maxpos=self.world_size,
                                        )
@@ -85,6 +104,7 @@ class GUI(object):
         self.lives=3
         
     def startmenu(self):
+        print "FPS: ",self.clock.get_fps()
         self.transstart()
         self.state="menu"
         size=self.screen.get_size()
@@ -152,8 +172,9 @@ class GUI(object):
         self.transsurface.blit(self.screen,(0,0))
         self.transamount=0
     def startdie(self):
-        
+        print "FPS: ",self.clock.get_fps()
         self.state="dead"
+        self.lives=3
         self.transstart()
         self.timeleft=-int(time.time()-self.endtime)
         self.player.position=[self.world_size[i]//2 for i in xrange(2)]
@@ -215,6 +236,8 @@ class GUI(object):
                 
                 textutil.drawtextcentered(self.screen, (1180,10), self.font, "0:"+str(ltime), 
                                           alignment=(2,0),color=color)
+                if self.score==0:
+                    self.screen.blit(self.instructions_image,(0,size[1]-64))
             
         else:
             self.screen.blit(self.splash,(0,0))
@@ -226,7 +249,7 @@ class GUI(object):
                 self.trans=False
         pygame.display.flip()
     def update(self):
-        if not self.trans:
+        if not self.trans or self.state=="menu" or self.state=="score":
             if self.state=="splash" and time.time()>self.endtime:
                 self.startmenu()
                 del self.splash
@@ -238,11 +261,22 @@ class GUI(object):
             if self.state!="dead":
                 for en, bul in pygame.sprite.groupcollide(self.enemies, self.bullets, False, False, pygame.sprite.collide_circle).iteritems():
                     #self.enemies.remove(i)
-                    if bul[0].shooter is not en:
+                    l=True
+                    if isinstance(en, basic_shape.Turtle):
+                        en.lives-=1
+                        if en.lives>0:
+                            l=False
+                    
+                    if l and bul[0].shooter is not en:
                         en.explode(bul[0])
                         en.kill()
                         self.addrandommonster()
                         bul[0].kill()
+                        if hasattr(self,"offset"):
+                            pos=tuple(en.position[i]+self.offset[i] for i in xrange(2))
+                        
+                            if (all(pos[i]>-32 and pos[i]<self.screen.get_size()[i]+32 for i in xrange(2))):
+                                self.play_explo()
             if self.player:
                 if self.state=="game" and not self.player_immune:
                     for i in pygame.sprite.spritecollide(self.player, self.bullets, False, pygame.sprite.collide_circle):
@@ -272,6 +306,9 @@ class GUI(object):
                     #    print i.rect.center, i.radius, self.player.position, self.player.radius, num
                 for i in pygame.sprite.spritecollide(self.player, self.coins, True, pygame.sprite.collide_circle):
                     self.score+=i.value
+                    
+                    self.playcoin()
+                    
                     if self.state=="dead":
                         self.deathscore+=i.value
             #print "collision"
@@ -302,14 +339,16 @@ class GUI(object):
                             print ex
                             error=True
                         
-                        self.startmenu()
                         if error:
                             self.menusurf.fill((255,0,0),(10,10,100,60))
                             textutil.drawtextcentered(self.menusurf, (60,40), self.font, "ERROR")
+                        
+                    self.startmenu()
                 elif event.type==pygame.KEYDOWN:
                     char=event.unicode
                     if char in string.ascii_letters or char in string.digits:
-                        self.name+=char
+                        if len(self.name)<10:
+                            self.name+=char
                     elif event.key==pygame.K_BACKSPACE:
                         self.name=self.name[:-1]
             elif self.state=="menu":
@@ -323,13 +362,15 @@ class GUI(object):
                     for i in self.objects:
                         i.event(event)
     def addrandommonster(self):
-        c=random.choice(("normal",)*14+("wave",)*4+("shooter",)*14)
+        c=random.choice(("normal",)*14+("wave",)*4+("shooter",)*1+("turtle",)*5)
         if c=="normal":
             self.addrandom()
         elif c=="wave":
             self.addrandom(cls=basic_shape.RotateCellerator,image=self.glowring_img,speed=0,accel=1.5,friction=0.1,rotates=False)
         elif c=="shooter":
-            self.addrandom(cls=basic_shape.Shooter,image=self.redguy_image)
+            self.addrandom(cls=basic_shape.Shooter,image=self.redguy_image,speed=0,accel=1.25,friction=0.1,rotates=True,radius=17)
+        elif c=="turtle":
+            self.addrandom(cls=basic_shape.Turtle,image=self.turtle_image,radius=96,speed=2)
     def addrandom(self, cls=basic_shape.Shape, image=None, angle=NotImplemented, speed=5, groups=None, friction=0, *args, **kwargs):
         position=[0,0]
         if image is None:
