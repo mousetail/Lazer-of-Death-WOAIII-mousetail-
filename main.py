@@ -52,6 +52,7 @@ class GUI(object):
         self.door_snd=pygame.mixer.Sound("door2.wav")
         self.door_snd_chan=pygame.mixer.Channel(3)
         
+        self.easy=True
         
         self.running=True;
         self.world_size=(3000,3000)
@@ -99,7 +100,12 @@ class GUI(object):
         self.coins.empty()
         self.astroids.empty()
         self.objects.add(self.player)
-        for i in range(50):
+        if self.easy:
+            num=30
+        else:
+            num=50
+        
+        for i in range(num):
             self.addrandommonster()
         self.score=0
         self.endtime=time.time()+60
@@ -107,22 +113,32 @@ class GUI(object):
         self.deathscore=0
         self.player_immune=False
         self.lives=3
+        if self.easy:
+            self.pen=50
+        else:
+            self.pen=100
         
-    def startmenu(self):
+    def startmenu(self, trans=True):
         print "FPS: ",self.clock.get_fps()
-        self.transstart()
+        if trans:
+            self.transstart()
         self.state="menu"
         size=self.screen.get_size()
         self.menusurf=pygame.Surface(size,pygame.SRCALPHA)
         self.menusurf.fill((0,255,0,200),(size[0]//2-200,0,400,600))
         textutil.drawtextcentered(self.menusurf, (size[0]//2,60), self.font, "Lazer of death")
-        textutil.drawtextcentered(self.menusurf, (size[0]//2,550), self.font, "Press enter to play")
+        textutil.drawtextcentered(self.menusurf, (size[0]//2, 470), self.font, "\"z\" to change difficulty")
+        textutil.drawtextcentered(self.menusurf, (size[0]//2,size[1]-30), self.font, "Press Space to Play")
         
-        self.highscores=textutil.loadhighscores()
-        pygame.draw.rect(self.menusurf,(255,255,255),(size[0]//2-180,100,360,420),2)
+        if self.easy:
+        
+            self.highscores=textutil.loadhighscores()
+        else:
+            self.highscores=textutil.loadhighscores("hardhiscores.csv")
+        pygame.draw.rect(self.menusurf,(255,255,255),(size[0]//2-180,100,360,335),2)
         for num, i in enumerate(sorted(self.highscores.keys(), reverse=True)):
-            if num<13:
-                textutil.drawtextcentered(self.menusurf, (size[0]//2-175,130+30*num), self.font, str(num+1)+": "+self.highscores[i],alignment=(0,1))
+            if num<10:
+                textutil.drawtextcentered(self.menusurf, (size[0]//2-175,130+30*num), self.font, "{0: >2d}:{1}".format(num+1,self.highscores[i]),alignment=(0,1))
                 textutil.drawtextcentered(self.menusurf, (size[0]//2+175,130+30*num), self.font, str(i),alignment=(2,1))
         
         if self.player:
@@ -142,6 +158,8 @@ class GUI(object):
         if self.deaths>0:
             print "score per death: "+str(self.deathscore/self.deaths)
         
+        print self.score-(self.pen*self.deaths)+self.deathscore
+        
         size=self.screen.get_size()
         self.menusurf=pygame.Surface(size, pygame.SRCALPHA)
         self.menusurf.fill((0,255,0,200),(size[0]//2-200,0,400,600))
@@ -151,18 +169,26 @@ class GUI(object):
         textutil.drawtextcentered(self.menusurf, (size[0]//2+180,100), self.font, "{0:05d}".format(self.score), alignment=(2,1))
         
         textutil.drawtextcentered(self.menusurf, (size[0]//2-180,160), self.font, "Death Penalty:",alignment=(0,1))
-        textutil.drawtextcentered(self.menusurf, (size[0]//2+180,160), self.font, "{0:05d}".format(100*self.deaths),color=(255,0,0),
+        textutil.drawtextcentered(self.menusurf, (size[0]//2+180,160), self.font, "{0:05d}".format(self.pen*self.deaths),color=(255,0,0),
                                    alignment=(2,1))
         
-        textutil.drawtextcentered(self.menusurf, (size[0]//2-180,220), self.font, "Total score:",alignment=(0,1))
-        textutil.drawtextcentered(self.menusurf, (size[0]//2+180,220), self.font, "{0:05d}".format(self.score-100*self.deaths),
+        textutil.drawtextcentered(self.menusurf, (size[0]//2-180,220), self.font, "Death coins:",alignment=(0,1))
+        textutil.drawtextcentered(self.menusurf, (size[0]//2+180,220), self.font, "{0:05d}".format(self.deathscore),color=(0,0,255),
                                    alignment=(2,1))
         
-        pygame.draw.line(self.menusurf,(255,255,255),(size[0]//2-185,190),(size[0]//2+185,190),2)
-        pygame.draw.line(self.menusurf,(255,255,255),(size[0]//2+60,80),(size[0]//2+60,240),2)
+        print self.score-(self.pen*self.deaths)+self.deathscore
+        textutil.drawtextcentered(self.menusurf, (size[0]//2-180,280), self.font, "Total score:",alignment=(0,1))
+        textutil.drawtextcentered(self.menusurf, (size[0]//2+180,280), self.font, 
+                                  "{0:05d}".format(self.score-self.pen*self.deaths+self.deathscore),
+                                   alignment=(2,1))
         
-        textutil.drawtextcentered(self.menusurf, (size[0]//2,300), self.font, "enter your name: ")
-        pygame.draw.rect(self.menusurf,(255,255,255),(size[0]//2-180,350,360,100),2)
+        print self.score-(self.pen*self.deaths)+self.deathscore
+        
+        pygame.draw.line(self.menusurf,(255,255,255),(size[0]//2-185,250),(size[0]//2+185,250),2)
+        pygame.draw.line(self.menusurf,(255,255,255),(size[0]//2+60,80),(size[0]//2+60,300),2)
+        
+        textutil.drawtextcentered(self.menusurf, (size[0]//2,370), self.font, "enter your name: ")
+        pygame.draw.rect(self.menusurf,(255,255,255),(size[0]//2-180,420,360,80),2)
         
         textutil.drawtextcentered(self.menusurf, (size[0]//2,size[1]-10),self.font, "press enter to continue",alignment=(1,2))
         """
@@ -171,7 +197,9 @@ class GUI(object):
         self.menusurf.blit(self.font.render("Death penalty: -"+str(100*self.deaths),1,(255,0,0)),(size[0]//2-135,140))
         self.menusurf.blit(self.font.render("Total score: "+str(self.score-100*self.deaths),1,(255,255,255)),(size[0]//2-135,200))
         """
-        self.score=self.score-100*self.deaths
+        print self.score-(self.pen*self.deaths)+self.deathscore
+        self.finscore=self.score-(self.pen*self.deaths)+self.deathscore
+        print self.finscore
     def transstart(self):
         self.trans=True
         self.transsurface.blit(self.screen,(0,0))
@@ -189,7 +217,10 @@ class GUI(object):
             i.kill()
         
         for i in range(75):
-            self.addrandom( image=self.astroid_image, groups=(self.astroids, self.objects), rotates=False, speed=random.random()*7+5)
+            speed=7
+            if self.easy:
+                speed=4
+            self.addrandom( image=self.astroid_image, groups=(self.astroids, self.objects), rotates=False, speed=random.random()*speed+5)
         for i in range(300):
             self.addrandom(coin.Coin, self.coin_img, None, random.random()*12, value=10, rotates=False,groups=(self.objects,self.special_coins,self.coins),friction=0,timeout=-1)
     def run(self):
@@ -227,9 +258,23 @@ class GUI(object):
             if self.state=="menu" or self.state=="score":
                 self.screen.blit(self.menusurf,(0,0))
                 if self.state=="score":
-                    textutil.drawtextcentered(self.screen,(size[0]//2,400),self.font,self.name)
+                    textutil.drawtextcentered(self.screen,(size[0]//2,460),self.font,self.name)
+                elif self.state=="menu":
+                    if self.easy:
+                        textutil.drawtextcentered(self.screen,(size[0]//2,520),self.font,"Easy",color=(0,0,255))
+                    else:
+                        textutil.drawtextcentered(self.screen,(size[0]//2,520),self.font,"Hard",color=(255,0,0))
+                        
             elif self.state=="game" or self.state=="dead":
-                self.screen.blit(self.font.render(str(self.score),1,(255,255,255)),(10,10))
+                tsurf=self.font.render(str(self.score),1,(255,255,255))#,(10,10))
+                self.screen.blit(tsurf,(10,10))
+                if self.deathscore!=0 or self.deaths!=0:
+                    num=self.deathscore-self.deaths*self.pen
+                    if num>0:
+                        self.screen.blit(self.font.render("+"+str(num),1,(0,0,255)),(10+tsurf.get_width(),10))
+                    else:
+                        self.screen.blit(self.font.render(str(num),1,(255,0,0)),(10+tsurf.get_width(),10))
+                
                 if self.state=="dead":
                     color=(100,100,100)
                     ltime=self.timeleft
@@ -240,7 +285,7 @@ class GUI(object):
                         for i in range(self.lives):
                             self.screen.blit(self.life_img,(size[0]//2-65+36*i,10))
                 
-                textutil.drawtextcentered(self.screen, (1180,10), self.font, "0:"+str(ltime), 
+                textutil.drawtextcentered(self.screen, (1180,10), self.font, "0:{0:02d}".format(ltime), 
                                           alignment=(2,0),color=color)
                 if self.score==0:
                     self.screen.blit(self.instructions_image,(0,size[1]-64))
@@ -250,6 +295,9 @@ class GUI(object):
         if self.trans:
             self.screen.blit(self.transsurface,(-self.transamount,0),(0,0,size[0]//2,size[1]))
             self.screen.blit(self.transsurface,(size[0]//2+self.transamount,0),(size[0]//2,0,size[0]//2,size[1]))
+            
+            
+            
             self.transamount+=15
             if self.transamount>size[0]//2:
                 self.trans=False
@@ -311,12 +359,15 @@ class GUI(object):
                     #    num+=1
                     #    print i.rect.center, i.radius, self.player.position, self.player.radius, num
                 for i in pygame.sprite.spritecollide(self.player, self.coins, True, pygame.sprite.collide_circle):
-                    self.score+=i.value
                     
                     self.playcoin()
                     
                     if self.state=="dead":
                         self.deathscore+=i.value
+                    else:
+                        
+                        self.score+=i.value
+                        
             #print "collision"
         
             if self.state=="game":
@@ -331,13 +382,17 @@ class GUI(object):
                     self.startmenu()
                     del self.splash
             elif self.state=="score":
-                if event.type==pygame.MOUSEBUTTONDOWN or (event.type==pygame.KEYDOWN and event.key==pygame.K_RETURN):
+                if (event.type==pygame.KEYDOWN and event.key==pygame.K_RETURN):
                     self.state="menu"
                     error=False
                     if self.name.strip():
-                        self.highscores[self.score]=self.name
+                        print self.score
+                        self.highscores[self.finscore]=self.name
                         try:
-                            textutil.savehighscores(self.highscores)
+                            if self.easy:
+                                textutil.savehighscores(self.highscores)
+                            else:
+                                textutil.savehighscores(self.highscores,"hardhiscores.csv")
                         except TypeError as ex:
                             print self.name, self.score
                             print self.highscores
@@ -358,9 +413,12 @@ class GUI(object):
                     elif event.key==pygame.K_BACKSPACE:
                         self.name=self.name[:-1]
             elif self.state=="menu":
-                if event.type==pygame.MOUSEBUTTONDOWN or (event.type==pygame.KEYDOWN and event.key==pygame.K_RETURN):
+                if (event.type==pygame.KEYDOWN and event.key==pygame.K_RETURN):
                     self.state="game"
                     self.startgame()
+                elif event.type==pygame.KEYDOWN and event.key==pygame.K_z:
+                    self.easy=not self.easy
+                    self.startmenu(False)
             elif self.state=="game":
                 if event.type==pygame.KEYDOWN and event.key==pygame.K_q:
                     self.endtime=time.time()+2

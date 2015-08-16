@@ -117,9 +117,9 @@ class Player(Shape):
         Shape.update(self)
         keys=pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
-                self.rotate(-5)
-        if keys[pygame.K_RIGHT]:
                 self.rotate(5)
+        if keys[pygame.K_RIGHT]:
+                self.rotate(-5)
         if keys[pygame.K_UP]:
                 self.accelarate(1)
         if keys[pygame.K_DOWN]:
