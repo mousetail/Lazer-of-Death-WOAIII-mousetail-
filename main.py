@@ -128,7 +128,7 @@ class GUI(object):
         self.menusurf.fill((0,255,0,200),(size[0]//2-200,0,400,600))
         textutil.drawtextcentered(self.menusurf, (size[0]//2,60), self.font, "Lazer of death")
         textutil.drawtextcentered(self.menusurf, (size[0]//2, 470), self.font, "\"z\" to change difficulty")
-        textutil.drawtextcentered(self.menusurf, (size[0]//2,size[1]-30), self.font, "Press Space to Play")
+        textutil.drawtextcentered(self.menusurf, (size[0]//2,size[1]-30), self.font, "Press Enter to Play")
         
         if self.easy:
         
