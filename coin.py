@@ -18,7 +18,7 @@ class Coin(basic_shape.Shape):
         else:
             self.value=1
         if "radius" not in kwargs.keys():
-            kwargs["radius"]=32
+            kwargs["radius"]=8
         if "calcscore" in kwargs.keys():
             calcscore=kwargs["calcscore"]
             del kwargs["calcscore"]
@@ -28,6 +28,8 @@ class Coin(basic_shape.Shape):
         self.age=0
         if self.timeout>0 and calcscore:
             self.GUI.score+=self.value
+         
+        #print self.speed
     def update(self):
         basic_shape.Shape.update(self)
         self.age+=1

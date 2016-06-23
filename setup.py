@@ -51,7 +51,7 @@ class BuildExe:
         self.project_url = "about:none"
  
         #Version of program
-        self.project_version = "0.0"
+        self.project_version = "1.0"
  
         #License of the program
         self.license = "MIT licence"
@@ -62,20 +62,27 @@ class BuildExe:
         self.copyright = "None"
  
         #Description
-        self.project_description = "MyApps Description"
+        self.project_description = "A pretty simple game about shooting down hords of neon triangles and circles."
  
         #Icon file (None will use pygame default icon)
-        self.icon_file = None
+        self.icon_file = "icon.ico"
  
         #Extra files/dirs copied to game
-        self.extra_datas = ['splash.png', 'Ouroboros.ogg', 'plane.png', 'astroid.png', 'redguy.png', 'background.png',
-                             'bullet.png', 'coin.png', 'life.png', 'glowring.png', 'player_plane.png', 'instructions.png',
-                              'background_special.png', 'coin2.wav', 'explosion.wav',"LICENSE","SUBWAY.ttf",
-                              "turtle.png","door2.wav"]
+        self.extra_datas = ["art","sound","font","LICENSE"]
+        
+        #                    'sound/Ouroboros.ogg', 'art/plane.png', 'art/astroid.png', 'art/redguy.png', 'art/background.png',
+        #                     'art/bullet.png', 'art/coin.png', 'art/life.png', 'art/glowring.png',
+        #                     'art/player_plane.png',
+        #                     'art/instructions.png','art/background_special.png', 'sound/coin2.wav',
+        #                      'sound/explosion.wav',
+        #                     "LICENSE","font/SUBWAY.ttf",
+        #                      "art/turtle.png","sound/door2.wav","art/orange_rect.png","art/neon_tube.png"]
  
         #Extra/excludes python modules
         self.extra_modules = ["pygame"]
-        self.exclude_modules = []
+        self.exclude_modules = ["Tkinter","numpy","urllib","urllib2","ssl","OpenGL",
+                                "multiprocessing","unittest"]
+        
         
         #DLL Excludes
         self.exclude_dll = ['']
@@ -86,7 +93,7 @@ class BuildExe:
         self.zipfile_name = None
  
         #Dist directory
-        self.dist_dir ='dist'
+        self.dist_dir ='Lazer_of_Death_bin'
  
     ## Code from DistUtils tutorial at http://wiki.python.org/moin/Distutils/Tutorial
     ## Originally borrowed from wxPython's setup and config files
@@ -98,7 +105,7 @@ class BuildExe:
         # get a list of all files under the srcdir matching wildcards,
         # returned in a format to be used for install_data
         def walk_helper(arg, dirname, files):
-            if '.svn' in dirname:
+            if '.svn' in dirname or ".git" in dirname:
                 return
             names = []
             lst, wildcards = arg
@@ -152,7 +159,7 @@ class BuildExe:
             # targets to build
             windows = [{
                 'script': self.script,
-                'icon_resources': [(0, self.icon_file)],
+                'icon_resources': [(4, self.icon_file)],
                 'copyright': self.copyright
             }],
             options = {'py2exe': {'optimize': 2, 'bundle_files': 1, 'compressed': True, \
