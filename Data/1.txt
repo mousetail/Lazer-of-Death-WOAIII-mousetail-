@@ -1,0 +1,9 @@
+The Harpoon
+
+The harpoon is
+the most simple
+enemy in the
+game. It just
+moves around
+and bounces of
+walls.

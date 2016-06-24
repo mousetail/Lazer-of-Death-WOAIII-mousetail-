@@ -1,0 +1,14 @@
+The orange
+rectangle
+
+The rectangle
+can only be
+killed when
+it's lost all
+of it's rings.
+Be carefull:
+If you hit it,
+a ring will
+fly off in a
+random
+direction.

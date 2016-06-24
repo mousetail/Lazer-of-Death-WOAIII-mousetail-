@@ -68,7 +68,7 @@ class BuildExe:
         self.icon_file = "icon.ico"
  
         #Extra files/dirs copied to game
-        self.extra_datas = ["art","sound","font","LICENSE"]
+        self.extra_datas = ["art","sound","font","Data","LICENSE"]
         
         #                    'sound/Ouroboros.ogg', 'art/plane.png', 'art/astroid.png', 'art/redguy.png', 'art/background.png',
         #                     'art/bullet.png', 'art/coin.png', 'art/life.png', 'art/glowring.png',

@@ -1,0 +1,8 @@
+The shooter
+
+The shooter will
+shoot at you! It
+can steal your
+kills, and 3
+bullets will also
+kill you.

@@ -1,0 +1,16 @@
+<> - Rotate
+^ Accalerate
+Z Shoot
+(You can hold
+Z)
+
+Scoring
+Every enemy is
+worth a different
+amount of points.
+You get half for
+killing them, half
+when you collect
+the coins they drop.
+
+Keep scrolling

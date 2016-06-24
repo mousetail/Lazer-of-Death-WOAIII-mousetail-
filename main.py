@@ -11,6 +11,7 @@ import coin
 import textutil
 import string
 import os
+import math
 
 class GUI(object):
     '''
@@ -22,16 +23,27 @@ class GUI(object):
         '''
         Constructor
         '''
+        
+    
+        
     def start(self):
         self.score=0
         self.trans=False
         pygame.init()
         self.screen=pygame.display.set_mode((1200,600))
+        
+        
+        self.font=pygame.font.Font("font/SUBWAY.ttf", 30)
+        textutil.drawtextcentered(self.screen, (600,300), self.font, "Loading...", 0, (255,255,255))
+        
+        pygame.display.flip()
+        
+        
         pygame.mixer.music.set_volume(0.5)
         pygame.mixer.music.load("sound/Ouroboros.ogg")
         pygame.mixer.music.play(-1)
-        pygame.display.flip()
-        self.endtime=int(time.time()+3)
+        
+        self.endtime=int(time.time())
         
         self.planeimage=pygame.image.load("art/plane.png").convert_alpha()
         self.astroid_image=pygame.image.load("art/astroid.png").convert_alpha()
@@ -47,6 +59,7 @@ class GUI(object):
         self.turtle_image=pygame.image.load("art/turtle.png").convert_alpha()
         self.orange_square_image=pygame.image.load("art/orange_rect.png").convert_alpha()
         self.white_circle_image=pygame.image.load("art/neon_tube.png").convert_alpha()
+        self.arrow_right_pic=pygame.image.load("art/Arrow_right.png").convert_alpha()
         
         self.coin_snd=pygame.mixer.Sound("sound/coin2.wav")
         self.coin_snd_chan=pygame.mixer.Channel(0)
@@ -55,13 +68,24 @@ class GUI(object):
         self.door_snd=pygame.mixer.Sound("sound/door2.wav")
         self.door_snd_chan=pygame.mixer.Channel(3)
         
+        self.menu_index=0
+        
         self.easy=True
+        
+        self.help_text=None
+        self.help_text_ID=0
         
         self.running=True;
         self.world_size=(3000,3000)
         #self.player.gui=self
         pygame.display.set_caption("Lazer of Death")
         pygame.display.set_icon(self.player_image)
+        
+        self.menu_items=(("Help",self.startHelp),
+                   ("Settings",self.startSettings),
+                   ["Sound: [ON]", self.toggleSound],
+                   ["Music: [ON]", self.toggleMusic]
+                   )
         
         self.player=None
         self.state="menu"
@@ -74,14 +98,17 @@ class GUI(object):
         pygame.key.set_repeat(100,100)
         self.clock=pygame.time.Clock()
         self.transsurface=pygame.Surface(self.screen.get_size())
+        self.menu=False
+        
+        self.target_monster=None
+        
         for i in range(50):
             self.addrandommonster()
-        self.font=pygame.font.Font("font/SUBWAY.ttf", 30)
         self.state="menu"
         
         self.startmenu(False)
         
-        print "load time="+str(time.time()-(self.endtime-3))+"s"
+        print "load time="+str(time.time()-(self.endtime))+"s"
     def playcoin(self):
         #pygame.mixer.get_busy()
         if not self.coin_snd_chan.get_busy():
@@ -130,11 +157,17 @@ class GUI(object):
             self.transstart()
         self.state="menu"
         size=self.screen.get_size()
+        
+        
+        self.offset=tuple(-self.world_size[i]//2+size[i]//2 for i in xrange(2))
+        
         self.menusurf=pygame.Surface(size,pygame.SRCALPHA)
         self.menusurf.fill((0,255,0,200),(size[0]//2-200,0,400,600))
         textutil.drawtextcentered(self.menusurf, (size[0]//2,60), self.font, "Lazer of death")
-        textutil.drawtextcentered(self.menusurf, (size[0]//2, 470), self.font, "\"z\" to change difficulty")
-        textutil.drawtextcentered(self.menusurf, (size[0]//2,size[1]-30), self.font, "Press Enter to Play")
+        
+        
+        textutil.drawtextcentered(self.menusurf, (size[0]//2, 470), self.font, "\"z\" to "+("select menu item" if self.menu else"change difficulty"))
+        textutil.drawtextcentered(self.menusurf, (size[0]//2,size[1]-30), self.font, "Press Space to Play")
         
         if self.easy:
         
@@ -147,11 +180,128 @@ class GUI(object):
                 textutil.drawtextcentered(self.menusurf, (size[0]//2-175,130+30*num), self.font, "{0: >2d}:{1}".format(num+1,self.highscores[i]),alignment=(0,1))
                 textutil.drawtextcentered(self.menusurf, (size[0]//2+175,130+30*num), self.font, str(i),alignment=(2,1))
         
+        
+        if not self.menu:
+            self.menusurf.fill((200,200,0,200),(size[0]//2+200,size[1]-110,180,50))
+            textutil.drawtextcentered(self.menusurf,(size[0]//2+290,size[1]-85),self.font,"menu",True,(255,255,255),(1,1))
+            self.menusurf.blit(self.arrow_right_pic,(size[0]//2+205,size[1]-105))
+            self.menusurf.blit(self.arrow_right_pic, (size[0]//2+335,size[1]-105))
+        else:
+            self.menusurf.fill((200,200,0,200),(size[0]//2+200,50,220,500))
+            for index, (name, func) in enumerate(self.menu_items):
+                textutil.drawtextcentered(self.menusurf, (size[0]//2+310,75+70*index), self.font, name, True
+                                          ,(255,255,255))
+            
+            pygame.draw.rect(self.menusurf, (255,255,255), (size[0]//2+205,55+70*self.menu_index,210,60), 2)
+        
         if self.player:
             self.player.kill()
             self.player=None
+            
+    def startHelp(self):
+        
+        print "Menu index: ",self.menu_index,"Gui page",self.help_text_ID,"Text len",len(self.help_text) if self.help_text else "None"
+        
+        IDchange=False
+        
+        self.state="help"
+        size=self.screen.get_size()
+        self.menusurf=pygame.Surface(size,pygame.SRCALPHA)
+        self.menusurf.fill((0,255,0,200),(size[0]//2-200,0,400,600))
+        
+        
+            
+        textutil.drawtextcentered(self.menusurf, (size[0]//2, 40), self.font,
+                                  "Instructions")
+        
+        
+        
+        if self.menu_index<0:
+            self.help_text_ID-=1
+            print "ID (0)",(self.help_text_ID)
+            self.menu_index=0
+            IDchange=True
+            if self.help_text_ID==0:
+                self.target_monster=None
+                
+        if self.help_text_ID<0:
+            self.help_text_ID=0
+        
+        print "ID (1)", self.help_text_ID
+        
+        if self.help_text_ID==0:
+            
+            if self.help_text==None or IDchange:
+                self.menu_index=0
+                f=open("data/Help.txt")
+                self.help_text=f.read().splitlines()
+                f.close()
+            
+            if self.menu_index-len(self.help_text)+15>0:
+                self.help_text_ID+=1
+                self.menu_index=0
+                IDchange=True
+                print "Saved"
+            else:
+                for i in range(16):
+                    if (i+self.menu_index<len(self.help_text)):
+                        textutil.drawtextcentered(self.menusurf, (size[0]//2,90+30*i), self.font,
+                                              self.help_text[i+self.menu_index])
+                    
+            
+                
+        if self.help_text_ID>0:
+            
+            
+            self.menusurf.fill((0,0,0,0), (size[0]//2-170,70,340,340))
+            
+            
+            
+            if self.menu_index>len(self.help_text)-4:
+                if self.help_text_ID<5:
+                    self.menu_index=0
+                    self.help_text_ID+=1
+                    IDchange=True
+                else:
+                    self.menu_index-=1
+                    
+            
+                
+            
+            ID=self.help_text_ID-1
+                
+            if (self.target_monster==None or self.target_monster.ID!=ID
+                +12):
+                self.target_monster=None
+                for i in self.enemies:
+                    if i.ID==ID:
+                        self.target_monster=i
+                        break
+                if self.target_monster==None:
+                    self.target_monster=self.addrandommonster(ID)
+                    
+                self.offset=list(self.offset)
+            
+            if IDchange or self.help_text==None:
+                f=open("Data/"+str(ID+1)+".txt")
+                self.help_text=f.read().splitlines()
+                f.close()
+                
+            for index in range(5):
+                if index+self.menu_index<len(self.help_text):
+                    text=self.help_text[index+self.menu_index]
+                    textutil.drawtextcentered(self.menusurf, (size[0]//2,430+30*index), self.font, 
+                                              text)
+        
+        pygame.draw.rect(self.menusurf,(255,255,255),(size[0]//2-180,60,360,size[1]-80),1)
+        
+    startSettings=startHelp
+            
     def starthighscore(self):
         self.transstart()
+        
+        
+        
         if self.player:
             self.player.kill()
             self.player=None
@@ -167,6 +317,7 @@ class GUI(object):
         print self.score-(self.pen*self.deaths)+self.deathscore
         
         size=self.screen.get_size()
+        self.offset=tuple(-self.world_size[i]//2+size[i]//2 for i in xrange(2))
         self.menusurf=pygame.Surface(size, pygame.SRCALPHA)
         self.menusurf.fill((0,255,0,200),(size[0]//2-200,0,400,600))
         textutil.drawtextcentered(self.menusurf, (size[0]//2,40), self.font, "Lazer of death")
@@ -229,6 +380,32 @@ class GUI(object):
             self.addrandom( image=self.astroid_image, groups=(self.astroids, self.objects), rotates=False, speed=random.random()*speed+5)
         for i in range(300):
             self.addrandom(coin.Coin, self.coin_img, None, random.random()*12, value=10, rotates=False,groups=(self.objects,self.special_coins,self.coins),friction=0,timeout=-1)
+    
+    def toggleSound(self):
+        channels=(self.coin_snd_chan,self.door_snd_chan)+self.expl_snd_chan
+        print channels
+        
+        if (self.menu_items[2][0].endswith("[OFF]")):
+            for i in channels:
+                i.set_volume(1)
+            self.menu_items[2][0]="Sound [ON]"
+        else:
+            for i in channels:
+                print (i)
+                i.set_volume(0)
+            self.menu_items[2][0]="Sound [OFF]"
+            
+        self.startmenu(False)
+            
+    def toggleMusic(self):
+        if (self.menu_items[3][0].endswith("[OFF]")):
+            pygame.mixer.music.unpause()
+            self.menu_items[3][0]="Music [ON]"
+        else:
+            pygame.mixer.music.pause()
+            self.menu_items[3][0]="Music [OFF]"
+            
+        self.startmenu(False)
     def run(self):
         while self.running:
             self.clock.tick(60)
@@ -245,8 +422,6 @@ class GUI(object):
                     self.offset[i]=-self.world_size[i]+size[i]
                 elif self.offset[i]>0:
                     self.offset[i]=0
-        else:
-            self.offset=tuple(-self.world_size[i]//2+size[i]//2 for i in xrange(2))
         first=tuple(self.offset[i]%128 - 128 for i in xrange(2))
         for x in range(11):
             for y in range(6):
@@ -260,7 +435,7 @@ class GUI(object):
             if (self.state!="dead" or i not in self.enemies):
                 i.draw(self.screen, self.offset)
         
-        if self.state=="menu" or self.state=="score":
+        if self.state=="menu" or self.state=="score" or self.state=="help" or self.state=="settings":
             self.screen.blit(self.menusurf,(0,0))
             if self.state=="score":
                 textutil.drawtextcentered(self.screen,(size[0]//2,460),self.font,self.name)
@@ -269,7 +444,7 @@ class GUI(object):
                     textutil.drawtextcentered(self.screen,(size[0]//2,520),self.font,"Easy",color=(0,0,255))
                 else:
                     textutil.drawtextcentered(self.screen,(size[0]//2,520),self.font,"Hard",color=(255,0,0))
-                    
+             
         elif self.state=="game" or self.state=="dead":
             tsurf=self.font.render(str(self.score),1,(255,255,255))#,(10,10))
             self.screen.blit(tsurf,(10,10))
@@ -372,6 +547,31 @@ class GUI(object):
             if self.state=="game":
                 if time.time()>self.endtime:
                     self.starthighscore()
+                    
+            if self.state=="help":
+                if self.target_monster!=None:
+                    size=self.screen.get_size()
+                    distance=(self.target_monster.position[0]+self.offset[0]-size[0]//2,
+                              self.target_monster.position[1]+self.offset[1]-240)
+                    
+                    dist=(distance[0]**2+distance[1]**2)
+                    
+                    if dist>(175):
+                        if dist<1200:
+                            speed=15
+                        else:
+                            speed=30
+                        
+                        angle=math.atan2(distance[0], distance[1])
+                    
+                        self.offset[0]+=-int(math.sin(angle)*speed)
+                        self.offset[1]+=-int(math.cos(angle)*speed)
+                    else:
+                        self.offset[0]=-self.target_monster.position[0]+size[0]//2
+                        self.offset[1]=-self.target_monster.position[1]+240
+                
+                #rect pos=(size[0]//2-170,70,340,340)
+                #self.offset=tuple(-self.world_size[i]//2+size[i]//2 for i in xrange(2))
     def event(self):
         for event in pygame.event.get():
             if event.type==pygame.QUIT:
@@ -402,38 +602,82 @@ class GUI(object):
                     elif event.key==pygame.K_BACKSPACE:
                         self.name=self.name[:-1]
             elif self.state=="menu":
-                if (event.type==pygame.KEYDOWN and event.key==pygame.K_RETURN):
-                    self.state="game"
-                    self.startgame()
-                elif event.type==pygame.KEYDOWN and event.key==pygame.K_z:
-                    self.easy=not self.easy
-                    self.startmenu(False)
+                if (event.type==pygame.KEYDOWN):
+                    if event.key==pygame.K_SPACE or (not self.menu and event.key==pygame.K_RETURN):
+                        self.state="game"
+                        self.startgame()
+                    elif event.key==pygame.K_z or (self.menu and event.key==pygame.K_RETURN):
+                        if (not self.menu):
+                            self.easy=not self.easy
+                            self.startmenu(False)
+                        else:
+                            self.menu_items[self.menu_index][1]()
+                    elif event.key==pygame.K_RIGHT:
+                        self.menu=True
+                        self.startmenu(False)
+                    elif event.key==pygame.K_LEFT:
+                        self.menu=False
+                        self.startmenu(False)
+                    elif event.key==pygame.K_UP:
+                        self.menu=True
+                        self.menu_index-=1
+                        if self.menu_index<0:
+                            self.menu_index=len(self.menu_items)-1
+                        self.startmenu(False)
+                    elif event.key==pygame.K_DOWN:
+                        self.menu=True
+                        self.menu_index+=1
+                        if self.menu_index>=len(self.menu_items):
+                            self.menu_index=0
+                        self.startmenu(False)
+            elif self.state=="help":
+                if event.type==pygame.KEYDOWN:
+                    if event.key==pygame.K_DOWN:
+                        self.menu_index+=1
+                        self.startHelp()
+                    elif event.key==pygame.K_UP:
+                        self.menu_index-=1
+                        self.startHelp()
+                        
+                    elif (event.key==pygame.K_ESCAPE or event.key==pygame.K_SPACE or
+                        event.key==pygame.K_RETURN):
+                        self.startmenu(False)
+                        self.help_text=None
+                        self.menu_index=0
+                        self.help_text_ID=0
             elif self.state=="game":
                 if event.type==pygame.KEYDOWN and event.key==pygame.K_q:
                     self.endtime=time.time()+2
                 else:
                     for i in self.objects:
                         i.event(event)
-    def addrandommonster(self):
-        c=random.choice(("normal",)*14+("wave",)*4+("shooter",)*1+("turtle",)*3+("orange_rect",))
-        #c="orange_rect"
-        if c=="normal":
-            self.addrandom()
-        elif c=="wave":
-            self.addrandom(cls=basic_shape.RotateCellerator,image=self.glowring_img,speed=0,accel=1.5,friction=0.1,rotates=False,
-                           numcoins=14)
-        elif c=="shooter":
-            self.addrandom(cls=basic_shape.Shooter,image=self.redguy_image,speed=0,accel=1.25,friction=0.1,rotates=True,radius=17,
-                           numcoins=7)
-        elif c=="turtle":
-            self.addrandom(cls=basic_shape.Turtle,image=self.turtle_image,radius=96,speed=2,
-                           numcoins=28)
-        elif c=="orange_rect":
-            self.addrandom(cls=basic_shape.Orange_Rect, image=self.orange_square_image, speed=2, radius=48, otherimage=self.white_circle_image,
-                           numcoins=32)
+                        
+    enemy_types=("normal",14),("wave",4),("shooter",2),("turtle",3),("orange_rect",1)
+                        
+    def addrandommonster(self, ID=-1):
+        if ID==-1:
+            c=random.choice(sum(((i[0],)*i[1] for i in self.enemy_types), ())  )
         else:
-            raise ValueError(c)
-    def addrandom(self, cls=basic_shape.Shape, image=None, angle=NotImplemented, speed=5, groups=None, friction=0, *args, **kwargs):
+            c=""
+        #c="orange_rect"
+        if ID==0 or c=="normal":
+            return self.addrandom()
+        elif ID==1 or c=="wave":
+            return self.addrandom(cls=basic_shape.RotateCellerator,image=self.glowring_img,speed=0,accel=1.5,friction=0.1,rotates=False,
+                           numcoins=14, ID=1)
+        elif ID==2 or c=="shooter":
+            return self.addrandom(cls=basic_shape.Shooter,image=self.redguy_image,speed=0,accel=1.25,friction=0.1,rotates=True,radius=17,
+                           numcoins=7, ID=2)
+        elif ID==3 or c=="turtle":
+            return self.addrandom(cls=basic_shape.Turtle,image=self.turtle_image,radius=96,speed=2,
+                           numcoins=28, ID=3)
+        elif ID==4 or c=="orange_rect":
+            return self.addrandom(cls=basic_shape.Orange_Rect, image=self.orange_square_image, speed=2, radius=48, otherimage=self.white_circle_image,
+                           numcoins=32, ID=4)
+        else:
+            raise ValueError("c="+str(c)+", ID="+str(ID))
+    def addrandom(self, cls=basic_shape.Shape, image=None, angle=NotImplemented, speed=5, groups=None,
+                  friction=0, ID=0, *args, **kwargs):
         position=[0,0]
         if image is None:
             image=self.planeimage
@@ -457,11 +701,12 @@ class GUI(object):
             angle=90*side
         elif angle is NotImplemented:
             angle=random.randint(0,360)
-        obj=cls(position=position,image=image,angle=angle,speed=speed,friction=friction,maxpos=self.world_size,*args, groups=groups, gui=self,**kwargs)
+        obj=cls(position=position,image=image,angle=angle,speed=speed,friction=friction,
+                maxpos=self.world_size,*args, groups=groups, gui=self, ID=ID, **kwargs)
         obj.accelarate(s0)
         #self.enemies.add(obj)
         #self.objects.add(obj)
-    
+        return obj
     
     def add_bullet(self,bullet):
         self.bullets.add(bullet)

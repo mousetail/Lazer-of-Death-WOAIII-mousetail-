@@ -17,7 +17,8 @@ class Shape(pygame.sprite.Sprite):
 
     def __init__(self, position, image, angle=0, speed=(0,0),friction=0.1,maxspeed=20,maxpos=(1000,500),
                  radius=32,groups=(), numcoins=None,
-                 gui=None, rotates=True, wallbehavior=WALLBEHAVIOR_BOUNCE):
+                 gui=None, rotates=True, wallbehavior=WALLBEHAVIOR_BOUNCE,
+                 ID=0):
         '''
         Constructor
         '''
@@ -39,6 +40,7 @@ class Shape(pygame.sprite.Sprite):
         self.wallbehavior=wallbehavior
         self.firerate=20
         self.num=0
+        self.ID=ID
         if numcoins is not None:
             self.numcoins=numcoins
     def update(self):
@@ -142,7 +144,7 @@ class Orange_Rect(Shape):
             self.subitems.append(Rect_orbit(position=self.position[:], gui=self.GUI, speed=[0,0],
                                             radius=16, image=otherimage, groups=self.groups(),
                                             rotates=False, wallbehavior=WALLBEHAVIOR_NONE,
-                                            friction=0, maxpos=self.maxpos))
+                                            friction=0, maxpos=self.maxpos, ID=-1))
     def update(self):
         Shape.update(self)
         self.rotAngle+=0.1
