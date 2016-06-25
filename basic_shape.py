@@ -103,7 +103,8 @@ class Shape(pygame.sprite.Sprite):
     
     def fire(self, calcscore=True):
         if self.num==0:
-            bul=Bullet(self.position,self.GUI.bullet_img,angle=self.angle,friction=0,radius=4,maxpos=self.maxpos,rotates=False)
+            bul=Bullet(self.position,self.GUI.bullet_img,angle=self.angle,friction=0,radius=4,
+                       maxpos=self.maxpos,rotates=False)
             bul.accelarate(12)
             bul.calcscore=calcscore
             bul.shooter=self

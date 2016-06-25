@@ -27,6 +27,9 @@ class GUI(object):
     
         
     def start(self):
+        
+        os.environ["SDL_VIDEO_WINDOW_POS"]="50,50"
+        
         self.score=0
         self.trans=False
         pygame.init()
@@ -200,7 +203,10 @@ class GUI(object):
             
     def startHelp(self):
         
-        print "Menu index: ",self.menu_index,"Gui page",self.help_text_ID,"Text len",len(self.help_text) if self.help_text else "None"
+        self.endtime=int(time.time())
+        
+        #print "Menu index: ",self.menu_index,"Gui page",self.help_text_ID,"Text len", \
+        #    len(self.help_text) if self.help_text else "None"
         
         IDchange=False
         
@@ -218,7 +224,6 @@ class GUI(object):
         
         if self.menu_index<0:
             self.help_text_ID-=1
-            print "ID (0)",(self.help_text_ID)
             self.menu_index=0
             IDchange=True
             if self.help_text_ID==0:
@@ -227,7 +232,6 @@ class GUI(object):
         if self.help_text_ID<0:
             self.help_text_ID=0
         
-        print "ID (1)", self.help_text_ID
         
         if self.help_text_ID==0:
             
@@ -241,7 +245,6 @@ class GUI(object):
                 self.help_text_ID+=1
                 self.menu_index=0
                 IDchange=True
-                print "Saved"
             else:
                 for i in range(16):
                     if (i+self.menu_index<len(self.help_text)):
@@ -270,8 +273,10 @@ class GUI(object):
             
             ID=self.help_text_ID-1
                 
-            if (self.target_monster==None or self.target_monster.ID!=ID
-                +12):
+            if (self.target_monster==None or self.target_monster.ID!=ID or
+                not self.target_monster.alive):
+                #print ("Changing Monster, current is "+str(self.target_monster)+" ID: "+
+                #    (str(self.target_monster.ID) if self.target_monster !=None else "N/A"))
                 self.target_monster=None
                 for i in self.enemies:
                     if i.ID==ID:
@@ -295,12 +300,15 @@ class GUI(object):
         
         pygame.draw.rect(self.menusurf,(255,255,255),(size[0]//2-180,60,360,size[1]-80),1)
         
-    startSettings=startHelp
-            
+    def startSettings(self):
+        self.state="Settings"
+        size=self.screen.get_size()
+        self.menusurf=pygame.Surface(size,pygame.SRCALPHA)
+        self.menusurf.fill((0,255,0,200),(size[0]//2-200,0,400,600))    
+        textutil.drawtextcentered(self.menusurf, (size[0]//2, 40), self.font,
+                                  "Settings")
     def starthighscore(self):
         self.transstart()
-        
-        
         
         if self.player:
             self.player.kill()
@@ -480,6 +488,7 @@ class GUI(object):
                 self.trans=False
         pygame.display.flip()
     def update(self):
+        
         if not self.trans:
             if self.state=="game" and self.player_immune:
                 self.player_immune-=1
@@ -489,7 +498,6 @@ class GUI(object):
             if self.state!="dead":
                 for en, bul in pygame.sprite.groupcollide(self.enemies, self.bullets, False, False, pygame.sprite.collide_circle).iteritems():
                     #self.enemies.remove(i)
-                    
                     killen, killbul=en.hit()
                     
                     if killen and bul[0].shooter is not en:
@@ -501,9 +509,15 @@ class GUI(object):
                         
                             if (all(pos[i]>-32 and pos[i]<self.screen.get_size()[i]+32 for i in xrange(2))):
                                 self.play_explo()
+                                
+                        if self.state=="help" and  en is self.target_monster:
+                            self.target_monster=None
+                            self.startHelp()
+                            self.endtime=int(time.time())+3
                     if killbul:
                         for x in bul:
-                            x.kill()
+                            if x.shooter!=en:
+                                x.kill()
             if self.player:
                 if self.state=="game" and not self.player_immune:
                     for i in pygame.sprite.spritecollide(self.player, self.bullets, False, pygame.sprite.collide_circle):
@@ -548,8 +562,8 @@ class GUI(object):
                 if time.time()>self.endtime:
                     self.starthighscore()
                     
-            if self.state=="help":
-                if self.target_monster!=None:
+            elif self.state=="help":
+                if self.target_monster!=None and (int(time.time()>self.endtime)):
                     size=self.screen.get_size()
                     distance=(self.target_monster.position[0]+self.offset[0]-size[0]//2,
                               self.target_monster.position[1]+self.offset[1]-240)
@@ -645,6 +659,15 @@ class GUI(object):
                         self.help_text=None
                         self.menu_index=0
                         self.help_text_ID=0
+                        
+                    elif event.key==pygame.K_x:
+                        if self.target_monster:
+                            b=basic_shape.Bullet(self.target_monster.position, self.orange_square_image,
+                                                               radius=256)
+                            b.timeout=0
+                            b.shooter=self.addrandommonster(2)
+                            b.calcscore=False
+                            self.add_bullet(b)
             elif self.state=="game":
                 if event.type==pygame.KEYDOWN and event.key==pygame.K_q:
                     self.endtime=time.time()+2
@@ -673,7 +696,7 @@ class GUI(object):
                            numcoins=28, ID=3)
         elif ID==4 or c=="orange_rect":
             return self.addrandom(cls=basic_shape.Orange_Rect, image=self.orange_square_image, speed=2, radius=48, otherimage=self.white_circle_image,
-                           numcoins=32, ID=4)
+                           numcoins=32, rotates=False, ID=4)
         else:
             raise ValueError("c="+str(c)+", ID="+str(ID))
     def addrandom(self, cls=basic_shape.Shape, image=None, angle=NotImplemented, speed=5, groups=None,
