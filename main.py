@@ -13,6 +13,8 @@ import string
 import os
 import math
 
+from collections import OrderedDict
+
 class GUI(object):
     '''
     classdocs
@@ -47,6 +49,8 @@ class GUI(object):
         pygame.mixer.music.play(-1)
         
         self.endtime=int(time.time())
+        
+        
         
         self.planeimage=pygame.image.load("art/plane.png").convert_alpha()
         self.astroid_image=pygame.image.load("art/astroid.png").convert_alpha()
@@ -90,6 +94,10 @@ class GUI(object):
                    ["Music: [ON]", self.toggleMusic]
                    )
         
+        self.settings=OrderedDict((("Music Volume",1.0),
+                       ("Sound Volume",1.0),
+                       ("Precise FPS",False)))
+        
         self.player=None
         self.state="menu"
         self.objects=pygame.sprite.Group()
@@ -100,6 +108,9 @@ class GUI(object):
         self.special_coins=pygame.sprite.Group()
         pygame.key.set_repeat(100,100)
         self.clock=pygame.time.Clock()
+        
+        self.fpsfunc=self.clock.tick
+        
         self.transsurface=pygame.Surface(self.screen.get_size())
         self.menu=False
         
@@ -301,12 +312,43 @@ class GUI(object):
         pygame.draw.rect(self.menusurf,(255,255,255),(size[0]//2-180,60,360,size[1]-80),1)
         
     def startSettings(self):
-        self.state="Settings"
+        self.state="conf"
         size=self.screen.get_size()
         self.menusurf=pygame.Surface(size,pygame.SRCALPHA)
         self.menusurf.fill((0,255,0,200),(size[0]//2-200,0,400,600))    
         textutil.drawtextcentered(self.menusurf, (size[0]//2, 40), self.font,
                                   "Settings")
+        
+        pygame.draw.rect(self.menusurf,(255,255,255),(size[0]//2-180,60,360,size[1]-80),2)
+        
+        for index, (text, value) in enumerate( self.settings.items()):
+            textutil.drawtextcentered(self.menusurf, (size[0]//2,90+100*index), self.font,
+                                                      text)
+            
+            if self.menu_index==index:
+                pygame.draw.rect(self.menusurf,(255,255,255),(size[0]//2-175,70+100*index,350,80),2)
+            
+            if isinstance(value, float):
+                textutil.drawtextcentered(self.menusurf, (size[0]//2-170,120+100*index),
+                                          self.font, "|"*int(value*16), alignment=(0,1))
+            elif isinstance(value, bool):
+                if value:
+                    textutil.drawtextcentered(self.menusurf, (size[0]//2,120+100*index), self.font,
+                                                      "Yes",color=(0,255,0))
+                else:
+                    textutil.drawtextcentered(self.menusurf, (size[0]//2,120+100*index), self.font,
+                                                      "No",color=(255,0,0))
+                    
+    def applySettings(self):
+        pygame.mixer.music.set_volume(self.settings["Music Volume"])
+        self.toggleSound()
+        self.toggleSound()
+        
+        if self.settings["Precise FPS"]:
+            self.fpsfunc=self.clock.tick_busy_loop
+        else:
+            self.fpsfunc=self.clock.tick
+        
     def starthighscore(self):
         self.transstart()
         
@@ -395,7 +437,7 @@ class GUI(object):
         
         if (self.menu_items[2][0].endswith("[OFF]")):
             for i in channels:
-                i.set_volume(1)
+                i.set_volume(self.settings["Sound Volume"])
             self.menu_items[2][0]="Sound [ON]"
         else:
             for i in channels:
@@ -416,7 +458,7 @@ class GUI(object):
         self.startmenu(False)
     def run(self):
         while self.running:
-            self.clock.tick(60)
+            self.fpsfunc(60)
             self.event()
             self.update()
             self.draw()
@@ -443,7 +485,7 @@ class GUI(object):
             if (self.state!="dead" or i not in self.enemies):
                 i.draw(self.screen, self.offset)
         
-        if self.state=="menu" or self.state=="score" or self.state=="help" or self.state=="settings":
+        if self.state=="menu" or self.state=="score" or self.state=="help" or self.state=="conf":
             self.screen.blit(self.menusurf,(0,0))
             if self.state=="score":
                 textutil.drawtextcentered(self.screen,(size[0]//2,460),self.font,self.name)
@@ -644,14 +686,17 @@ class GUI(object):
                         if self.menu_index>=len(self.menu_items):
                             self.menu_index=0
                         self.startmenu(False)
-            elif self.state=="help":
+            elif self.state=="help" or self.state=="conf":
+                
+                func=self.startHelp if self.state=="help" else self.startSettings
+                
                 if event.type==pygame.KEYDOWN:
                     if event.key==pygame.K_DOWN:
                         self.menu_index+=1
-                        self.startHelp()
+                        func()
                     elif event.key==pygame.K_UP:
                         self.menu_index-=1
-                        self.startHelp()
+                        func()
                         
                     elif (event.key==pygame.K_ESCAPE or event.key==pygame.K_SPACE or
                         event.key==pygame.K_RETURN):
@@ -659,6 +704,9 @@ class GUI(object):
                         self.help_text=None
                         self.menu_index=0
                         self.help_text_ID=0
+                        
+                        if self.state=="conf":
+                            self.applySettings()
                         
                     elif event.key==pygame.K_x:
                         if self.target_monster:
@@ -668,6 +716,28 @@ class GUI(object):
                             b.shooter=self.addrandommonster(2)
                             b.calcscore=False
                             self.add_bullet(b)
+                            
+                    elif self.state=="conf":
+                        if event.key==pygame.K_z:
+                            sdict=tuple(self.settings.items())
+                            if isinstance(sdict[self.menu_index][1],bool):
+                                self.settings[sdict[self.menu_index][0]]=not sdict[self.menu_index][1]
+                                self.applySettings()
+                                self.startSettings()
+                        elif event.key==pygame.K_LEFT:
+                            sdict=tuple(self.settings.items())
+                            if isinstance(sdict[self.menu_index][1],float):
+                                self.settings[sdict[self.menu_index][0]]=max(0.0,
+                                                                sdict[self.menu_index][1]-0.064)
+                                self.applySettings()
+                                self.startSettings()
+                        elif event.key==pygame.K_RIGHT:
+                            sdict=tuple(self.settings.items())
+                            if isinstance(sdict[self.menu_index][1],float):
+                                self.settings[sdict[self.menu_index][0]]=min(1.0,
+                                                                sdict[self.menu_index][1]+0.064)
+                                self.applySettings()
+                                self.startSettings()   
             elif self.state=="game":
                 if event.type==pygame.KEYDOWN and event.key==pygame.K_q:
                     self.endtime=time.time()+2
